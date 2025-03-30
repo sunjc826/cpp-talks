@@ -1,3 +1,4 @@
+#include "utils.hpp"
 #ifndef CURRENT_VERSION
 #   define CURRENT_VERSION 1
 #endif
@@ -18,7 +19,6 @@ namespace v2
     }
 }
 
-#include <cstdio>
 int main()
 {
 #if CURRENT_VERSION == 1
@@ -26,7 +26,7 @@ int main()
 #elif CURRENT_VERSION == 2
     using namespace v2;
 #else
-#   error "Bad version"
+#   error "Bad CURRENT_VERSION"
 #endif
     
     puts(myfunc());

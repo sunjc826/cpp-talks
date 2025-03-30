@@ -1,0 +1,2 @@
+#!/bin/bash
+eval "$("$(dirname -- "${BASH_SOURCE[0]}")"/compile.sh --completion)"

@@ -8,7 +8,7 @@
 #define v1_inline
 #define v2_inline inline
 #else
-#   error "Bad CURRENT_VERSION " CURRENT_VERSION
+#   error "Bad CURRENT_VERSION"
 #endif
 
 v1_inline namespace v1

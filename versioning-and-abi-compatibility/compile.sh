@@ -1,6 +1,7 @@
+#!/usr/bin/env bash
 log_err()
 {
-    printf >&2 "ERROR: %s\n" "$*"
+    printf >&2 "$(tput setaf 1)ERROR: %s$(tput sgr0)\n" "$*"
 }
 
 log_and_run()
@@ -17,9 +18,10 @@ section_marker()
 function __compile_main()
 {
     set -o pipefail
-    local cc=g++
+    local cc=gcc
     local is_compile_as_lib=false
     local version=
+    local is_swap_executable_version=false
     local file=
     local is_execute=false
     local is_show_symbols=false
@@ -51,8 +53,11 @@ function __compile_main()
             version=$2
             shift_by=2
             ;;
+        --swap-executable-version)
+            is_swap_executable_version=true
+            ;;
         --file)
-            autocompletion_lazy=(compgen -f)
+            autocompletion_lazy=(find . '(' -name '*.c' -o -name '*.cpp' ')' -printf "%P\n")
             file=$2
             shift_by=2
             ;;
@@ -68,12 +73,14 @@ function __compile_main()
         *)
             is_help=true
             err_msg="Unrecognized argument $1"
+            break
             ;;
         esac
         if (( shift_by > $# ))
         then
             is_help=true
-            err_msg="Expected $shift_by+1 arguments for $1"
+            err_msg="Expected $((shift_by+1)) arguments for $1"
+            break
         fi
         shift "$shift_by"
     done
@@ -85,10 +92,15 @@ __compile_complete()
 {
     local command=\$1 cur_word=\$2 prev_word=\$3
     local autocompletion=() autocompletion_lazy=()
-    source "\${COMP_WORDS[@]:0:COMP_CWORD+1}" || true
+    if ! command -v "\$command" &>/dev/null;
+    then
+        return
+    fi    
+    source "\${COMP_WORDS[@]:0:COMP_CWORD}" ""
     COMPREPLY=(\$(compgen -W "\${autocompletion[*]} \$("\${autocompletion_lazy[@]}")" -- "\$cur_word"))
 }
 complete -F __compile_complete compile.sh
+complete -F __compile_complete ./compile.sh
 EOF
         return 0
     fi
@@ -149,12 +161,26 @@ EOF
         log_err "compiler $cc not found"
         return 1
     fi
+
+    local file_dirname=
+    local file_basename=
+    case "$file" in
+    */*)
+        file_dirname=${file%/*}
+        file_basename=${file##*/}
+        ;;
+    *)
+        file_dirname=.
+        file_basename=$file
+        ;;
+    esac
+
     local out
     local cc_args=()
     if "$is_compile_as_lib"
     then
         section_marker "Compiling and linking into shared library"
-        out="lib${file%.*}.so"
+        out=${file_dirname}/lib${file_basename%.*}.so
         cc_args=(-shared)
         if [[ -e "${file%.*}.ver" ]]
         then
@@ -164,7 +190,7 @@ EOF
         section_marker "Compiling and linking into executable"
         out="${file%.*}.exe"
     fi
-    if ! log_and_run "$cc" -o "$out" -DCURRENT_VERSION="$version" "${cc_args[@]}" "$file"
+    if ! log_and_run "$cc" -o "$out" -DCURRENT_VERSION="$version" --save-temps "${cc_args[@]}" "$file"
     then
         log_err "compilation failed"
         return 1
@@ -176,16 +202,39 @@ EOF
         then
             section_marker "Linking shared library $out before we can run it"
             runnable="${file%.*}.exe"
-            if ! log_and_run "$cc" -o "$runnable" -Wl,-rpath="$(dirname -- "$out")" "$out"
+            local opt_main=()
+            if [[ -e "${file%.*}_main.${file##*.}" ]]
+            then
+                echo "We also found a 'main' file (this should provide a main function)"
+                opt_main=("${file%.*}_main.${file##*.}")
+                local executable_version=$version
+                if "$is_swap_executable_version"
+                then
+                    case "$version" in
+                    1) executable_version=2;;
+                    2) executable_version=1;;
+                    *) log_err "This should not be reached"; return 1;;
+                    esac
+                    echo "The executable will be (purposely) compiled with the wrong CURRENT_VERSION $executable_version"
+                fi
+                opt_main+=(-DCURRENT_VERSION="$executable_version")
+            fi
+
+            if ! log_and_run "$cc" -o "$runnable" --save-temps -Wl,-rpath="$(dirname -- "$out")" "$out" "${opt_main[@]}"
             then
                 log_err "Linking failed"
+                return 1
             fi
         fi
-        section_marker "Executing the executable $runnable"
-        if ! log_and_run "$runnable"
+        section_marker "Executing the executable $runnable (Output in green)"
+        tput setaf 2
+        if ! "$runnable"
         then
+            tput sgr0
             log_err "$runnable failed"
+            return 1
         fi
+        tput sgr0
     fi
     if "$is_show_symbols"
     then
@@ -198,7 +247,10 @@ EOF
         fi
 
         section_marker "Printing symbol version info"
-        log_and_run readelf --wide --version-info "$out"
+        if ! log_and_run readelf --wide --version-info "$out"
+        then
+            log_err "readelf failed"
+        fi
     fi
 }
 

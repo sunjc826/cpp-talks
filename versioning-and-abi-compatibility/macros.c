@@ -1,3 +1,4 @@
+#include "utils.h"
 #ifndef CURRENT_VERSION
 #   define CURRENT_VERSION 1
 #endif
@@ -16,7 +17,8 @@ char const * v2(myfunc)(void)
 {
     return "v2_myfunc";
 }
-#include <stdio.h>
+
+__attribute__((weak))
 int main()
 {
     puts(v(myfunc)());

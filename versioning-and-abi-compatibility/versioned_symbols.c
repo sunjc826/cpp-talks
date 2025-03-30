@@ -1,3 +1,4 @@
+#include "utils.h"
 #ifndef CURRENT_VERSION
 #   define CURRENT_VERSION 1
 #endif
@@ -17,29 +18,25 @@
 #   undef v2
 #   define v2(symbol) DEFAULT_SYMVER(v2, symbol)
 #else
-#   error "Bad version"
+#   error "Bad CURRENT_VERSION"
 #endif
-
-#include <stdio.h>
 
 char const * myfunc(void);
 
+__attribute__((weak))
 int main()
 {
     puts(myfunc());
 }
 
+v1(myfunc)
 char const * v1_myfunc(void)
 {
     return "v1_myfunc";
 }
 
-
+v2(myfunc)
 char const * v2_myfunc(void)
 {
     return "v2_myfunc";
 }
-
-
-v1(myfunc)
-v2(myfunc)

@@ -1,3 +1,4 @@
+#include "utils.h"
 #ifndef CURRENT_VERSION
 #   define CURRENT_VERSION 1
 #endif
@@ -7,7 +8,7 @@
 #elif CURRENT_VERSION == 2
 #   define myfunc v2_myfunc
 #else
-#   error "Bad version"
+#   error "Bad CURRENT_VERSION"
 #endif
 
 char const * v1_myfunc(void)
@@ -19,7 +20,7 @@ char const * v2_myfunc(void)
 {
     return "v2_myfunc";
 }
-#include <stdio.h>
+
 int main()
 {
     puts(myfunc());    

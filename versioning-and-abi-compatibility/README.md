@@ -1,3 +1,3 @@
-- To load bash completions: `source activate`
-- To compile a file: `compile.sh --file <file> --version <1|2> <for more options hit TAB>`
-- To check if all files can compile: `test.sh`
+- To load bash completions: `source ./activate`
+- To compile a file: `./compile.sh --file <file> --version <1|2> <for more options hit TAB>`
+- To check if all files can compile: `./test.sh`

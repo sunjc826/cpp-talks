@@ -26,6 +26,7 @@ function __compile_main()
     local is_execute=false
     local is_show_symbols=false
     local is_completion=false
+    local is_cpp_filt=true
     if (("${#COMP_WORDS[@]}" == 0))
     then
         local autocompletion=() autocompletion_lazy=()
@@ -66,6 +67,9 @@ function __compile_main()
             ;;
         --show-symbols)
             is_show_symbols=true
+            ;;
+        --no-cppfilt)
+            is_cpp_filt=false
             ;;
         --completion)
             is_completion=true
@@ -228,7 +232,7 @@ EOF
         fi
         section_marker "Executing the executable $runnable (Output in green)"
         tput setaf 2
-        if ! "$runnable"
+        if ! ./"$runnable"
         then
             tput sgr0
             log_err "$runnable failed"
@@ -241,7 +245,7 @@ EOF
         section_marker "Printing relevant entries from the symbol table"
         if ! { log_and_run readelf --wide --syms "$out" |\
              grep -E '(^Symbol table)|myfunc' |\
-             if "$is_cpp"; then c++filt; else cat ;fi ;}
+             if "$is_cpp" && "$is_cpp_filt"; then c++filt; else cat ;fi ;}
         then
             log_err "readelf failed"
         fi
